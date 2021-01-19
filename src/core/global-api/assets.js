@@ -9,16 +9,18 @@ export function initAssetRegisters (Vue: GlobalAPI) {
    */
   ASSET_TYPES.forEach(type => {
     Vue[type] = function (
-      id: string,
-      definition: Function | Object
+      id: string,  // 组件/指令/过滤器 名字
+      definition: Function | Object  // 参数
     ): Function | Object | void {
       if (!definition) {
         return this.options[type + 's'][id]
       } else {
         /* istanbul ignore if */
         if (process.env.NODE_ENV !== 'production' && type === 'component') {
+          // 校验自定义组件名称
           validateComponentName(id)
         }
+        // 判断definition是否是对象
         if (type === 'component' && isPlainObject(definition)) {
           definition.name = definition.name || id
           definition = this.options._base.extend(definition)

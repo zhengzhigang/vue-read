@@ -10,10 +10,16 @@ export function createCompilerCreator (baseCompile: Function): Function {
       template: string,
       options?: CompilerOptions
     ): CompiledResult {
+      // options = {
+      //   outputSourceRange: true,
+      //   shouldDecodeNewlines: false,
+      //   shouldDecodeNewlinesForHref: false,
+      //   delimiters: undefined,
+      //   comments: undefined
+      // }
       const finalOptions = Object.create(baseOptions)
       const errors = []
       const tips = []
-
       let warn = (msg, range, tip) => {
         (tip ? tips : errors).push(msg)
       }

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="../dist/vue.js"></script>
+</head>
+<body>
+    <div id="app">
+        <div v-if="row.cluestatus==1">
+            <template slot-scope="scope">
+                <el-button
+                    type="text"
+                    size="small"
+                    @click="viewCustomer(scope.row)"
+                    >转客户</el-button>
+            </template>
+        </div>
+
+    </div>
+    <script src="design-pattern.js"></script>
+    <script src="algorithm.js"></script>
+    <script>
+        // 观察者集合
+        class ObserverList {
+            constructor() {
+                this.list = [];
+            }
+            add(obj) {
+                this.list.push(obj);
+            }
+            removeAt(index) {
+                this.list.splice(index, 1);
+            }
+            count() {
+                return this.list.length;
+            }
+            get(index) {
+                if (index < 0 || index >= this.count()) {
+                    return;
+                }
+                return this.list[index];
+            }
+            indexOf(obj, start = 0) {
+                let pos = start;
+                while (pos < this.count()) {
+                    if (this.list[pos] === obj) {
+                        return pos;
+                    }
+                    pos++;
+                }
+                return -1;
+            }
+        }
+
+        // 观察者类
+        class Observer {
+            constructor(fn) {
+                this.update = fn;
+            }
+        }
+
+        // 观察目标类
+        class Subject {
+            constructor() {
+                this.observers = new ObserverList(); 
+            }
+            addObserver(observer) {
+                this.observers.add(observer);
+            }
+            removeObserver(observer) {
+                this.observers.removeAt(
+                    this.observers.indexOf(observer)
+                );
+            }
+            notify(context) {
+                const count = this.observers.count();
+                for (let i = 0; i < count; ++i) {
+                    this.observers.get(i).update(context);
+                }
+            }
+        }
+
+        // 测试例子，在数据A变更时，输出A的新值
+        const observer = new Observer((newval) => {
+            console.log(`A的最新值是${newval}`);
+        })
+
+        const subject = new Subject();
+        subject.addObserver(observer);
+        // 现在，做出改变的通知
+        subject.notify('Hello, world');
+        // A的最新值是Hello, world
+    </script>
+    <script>
+        // Vue.component('ad', {
+        //     data() {
+        //         return {
+        //             name: 'aaaa'
+        //         }
+        //     }
+        // })
+        // var Profile = {
+        //     template: '<p>{{firstName}} {{lastName}} aka {{alias}}</p>',
+        //     mounted() {
+        //         console.log('111')
+        //         return 'dasds'
+        //     },
+        //     data: function () {
+        //         return {
+        //         firstName: 'Walter',
+        //         lastName: 'White',
+        //         alias: 'Heisenberg'
+        //         }
+        //     }
+        // }
+        var app = new Vue({
+            // el: '#app',
+            mounted() {
+            },
+            template: `<div @click="clickHandler">
+                            {{ message }}
+                            <span>{{ message }}</span>
+                            <h1>{{ banji }}</h1>
+                        </div>`,
+            // render: h => h(Profile),
+            data: {
+                message: 'Hello Vue!',
+                banji: 3
+            },
+            // props: {
+            //     age: {
+            //         type: Number,
+            //         default: 28
+            //     }
+            // },
+            beforeCreate() {
+                console.log(this)
+            },
+            methods: {
+                clickHandler() {
+                    this.$nextTick(() => {
+                        // this.message = '郑智刚'
+                    })
+                }
+            }
+        }).$mount('#app')
+
+    </script>
+</body>
+</html>

@@ -66,12 +66,11 @@ Vue.prototype.$mount = function (
         outputSourceRange: process.env.NODE_ENV !== 'production',
         shouldDecodeNewlines,
         shouldDecodeNewlinesForHref,
-        delimiters: options.delimiters,
+        delimiters: options.delimiters, // 分隔符
         comments: options.comments
       }, this)
       options.render = render
       options.staticRenderFns = staticRenderFns
-
       /* istanbul ignore if */
       if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
         mark('compile end')

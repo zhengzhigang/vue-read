@@ -32,6 +32,14 @@ export const emptyNode = new VNode('', {}, [])
 
 const hooks = ['create', 'activate', 'update', 'remove', 'destroy']
 
+/*
+  判断两个VNode节点是否是同一个节点，需要满足以下条件
+  tag（当前节点的标签名）相同
+  isComment（是否为注释节点）相同
+  是否data（当前节点对应的对象，包含了具体的一些数据信息，是一个VNodeData类型，可以参考VNodeData类型中的数据信息）都有定义
+  当标签是<input>的时候，type必须相同
+  或者
+*/
 function sameVnode (a, b) {
   return (
     a.key === b.key && (
@@ -49,6 +57,10 @@ function sameVnode (a, b) {
   )
 }
 
+/*
+  判断当标签是<input>的时候，type是否相同
+  某些浏览器不支持动态修改<input>类型，所以他们被视为不同类型
+*/
 function sameInputType (a, b) {
   if (a.tag !== 'input') return true
   let i
@@ -697,6 +709,7 @@ export function createPatchFunction (backend) {
     }
   }
 
+  // oldVnode - 旧节点  vnode - 新节点  hydrating - 是否是服务端渲染  removeOnly
   return function patch (oldVnode, vnode, hydrating, removeOnly) {
     if (isUndef(vnode)) {
       if (isDef(oldVnode)) invokeDestroyHook(oldVnode)

@@ -187,6 +187,7 @@ export function mountComponent (
     }
   } else {
     updateComponent = () => {
+      /* render返回一个新的VNode节点，传入_update中与旧的VNode对象进行对比 */
       vm._update(vm._render(), hydrating)
     }
   }
@@ -194,7 +195,7 @@ export function mountComponent (
   // we set this to vm._watcher inside the watcher's constructor
   // since the watcher's initial patch may call $forceUpdate (e.g. inside child
   // component's mounted hook), which relies on vm._watcher being already defined
-  new Watcher(vm, updateComponent, noop, {
+  var w = new Watcher(vm, updateComponent, noop, {
     before () {
       if (vm._isMounted && !vm._isDestroyed) {
         callHook(vm, 'beforeUpdate')

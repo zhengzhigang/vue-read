@@ -140,37 +140,6 @@ var hyphenate = cached(function (str) {
 });
 
 /**
- * Simple bind polyfill for environments that do not support it,
- * e.g., PhantomJS 1.x. Technically, we don't need this anymore
- * since native bind is now performant enough in most browsers.
- * But removing it would mean breaking code that was able to run in
- * PhantomJS 1.x, so this must be kept for backward compatibility.
- */
-
-/* istanbul ignore next */
-function polyfillBind (fn, ctx) {
-  function boundFn (a) {
-    var l = arguments.length;
-    return l
-      ? l > 1
-        ? fn.apply(ctx, arguments)
-        : fn.call(ctx, a)
-      : fn.call(ctx)
-  }
-
-  boundFn._length = fn.length;
-  return boundFn
-}
-
-function nativeBind (fn, ctx) {
-  return fn.bind(ctx)
-}
-
-var bind = Function.prototype.bind
-  ? nativeBind
-  : polyfillBind;
-
-/**
  * Mix properties into target object.
  */
 function extend (to, _from) {
@@ -299,8 +268,8 @@ function decodeAttr (value, shouldDecodeNewlines) {
 function parseHTML (html, options) {
   var stack = [];
   var expectHTML = options.expectHTML;
-  var isUnaryTag$$1 = options.isUnaryTag || no;
-  var canBeLeftOpenTag$$1 = options.canBeLeftOpenTag || no;
+  var isUnaryTag = options.isUnaryTag || no;
+  var canBeLeftOpenTag = options.canBeLeftOpenTag || no;
   var index = 0;
   var last, lastTag;
   while (html) {
@@ -462,12 +431,12 @@ function parseHTML (html, options) {
       if (lastTag === 'p' && isNonPhrasingTag(tagName)) {
         parseEndTag(lastTag);
       }
-      if (canBeLeftOpenTag$$1(tagName) && lastTag === tagName) {
+      if (canBeLeftOpenTag(tagName) && lastTag === tagName) {
         parseEndTag(tagName);
       }
     }
 
-    var unary = isUnaryTag$$1(tagName) || !!unarySlash;
+    var unary = isUnaryTag(tagName) || !!unarySlash;
 
     var l = match.attrs.length;
     var attrs = new Array(l);
@@ -707,11 +676,15 @@ var isFF = UA && UA.match(/firefox\/(\d+)/);
 
 // Firefox has a "watch" function on Object.prototype...
 var nativeWatch = ({}).watch;
+
+var supportsPassive = false;
 if (inBrowser) {
   try {
     var opts = {};
     Object.defineProperty(opts, 'passive', ({
       get: function get () {
+        /* istanbul ignore next */
+        supportsPassive = true;
       }
     })); // https://github.com/facebook/flow/issues/285
     window.addEventListener('test-passive', null, opts);
@@ -735,9 +708,6 @@ var isServerRendering = function () {
   return _isServer
 };
 
-// detect devtools
-var devtools = inBrowser && window.__VUE_DEVTOOLS_GLOBAL_HOOK__;
-
 /* istanbul ignore next */
 function isNative (Ctor) {
   return typeof Ctor === 'function' && /native code/.test(Ctor.toString())
@@ -746,31 +716,8 @@ function isNative (Ctor) {
 var hasSymbol =
   typeof Symbol !== 'undefined' && isNative(Symbol) &&
   typeof Reflect !== 'undefined' && isNative(Reflect.ownKeys);
-
-var _Set;
 /* istanbul ignore if */ // $flow-disable-line
-if (typeof Set !== 'undefined' && isNative(Set)) {
-  // use native Set when available.
-  _Set = Set;
-} else {
-  // a non-standard Set polyfill that only works with primitive keys.
-  _Set = /*@__PURE__*/(function () {
-    function Set () {
-      this.set = Object.create(null);
-    }
-    Set.prototype.has = function has (key) {
-      return this.set[key] === true
-    };
-    Set.prototype.add = function add (key) {
-      this.set[key] = true;
-    };
-    Set.prototype.clear = function clear () {
-      this.set = Object.create(null);
-    };
-
-    return Set;
-  }());
-}
+if (typeof Set !== 'undefined' && isNative(Set)) ;
 
 var ASSET_TYPES = [
   'component',
@@ -908,7 +855,9 @@ if (process.env.NODE_ENV !== 'production') {
   warn = function (msg, vm) {
     var trace = vm ? generateComponentTrace(vm) : '';
 
-    if (hasConsole && (!config.silent)) {
+    if (config.warnHandler) {
+      config.warnHandler.call(null, msg, vm, trace);
+    } else if (hasConsole && (!config.silent)) {
       console.error(("[Vue warn]: " + msg + trace));
     }
   };
@@ -1041,25 +990,43 @@ var VNode = function VNode (
   componentOptions,
   asyncFactory
 ) {
+  /*当前节点的标签名*/
   this.tag = tag;
+  /*当前节点对应的对象，包含了具体的一些数据信息，是一个VNodeData类型，可以参考VNodeData类型中的数据信息*/
   this.data = data;
+  /*当前节点的子节点，是一个数组*/
   this.children = children;
+  /*当前节点的文本*/
   this.text = text;
+  /*当前虚拟节点对应的真实dom节点*/
   this.elm = elm;
+  /*当前节点的名字空间*/
   this.ns = undefined;
+  /*编译作用域*/
   this.context = context;
+  /*函数化组件作用域*/
   this.fnContext = undefined;
   this.fnOptions = undefined;
   this.fnScopeId = undefined;
+  /*节点的key属性，被当作节点的标志，用以优化*/
   this.key = data && data.key;
+  /*组件的option选项*/
   this.componentOptions = componentOptions;
+  /*当前节点对应的组件的实例*/
   this.componentInstance = undefined;
+  /*当前节点的父节点*/
   this.parent = undefined;
+  /*简而言之就是是否为原生HTML或只是普通文本，innerHTML的时候为true，textContent的时候为false*/
   this.raw = false;
+  /*静态节点标志*/
   this.isStatic = false;
+  /*是否作为跟节点插入*/
   this.isRootInsert = true;
+  /*是否为注释节点*/
   this.isComment = false;
+  /*是否为克隆节点*/
   this.isCloned = false;
+  /*是否有v-once指令*/
   this.isOnce = false;
   this.asyncFactory = asyncFactory;
   this.asyncMeta = undefined;
@@ -1081,7 +1048,9 @@ Object.defineProperties( VNode.prototype, prototypeAccessors );
  * dynamically accessing methods on Array prototype
  */
 
+/*取得原生数组的原型*/
 var arrayProto = Array.prototype;
+/*创建一个新的数组对象，修改该对象上的数组的七个方法，防止污染原生数组方法*/
 var arrayMethods = Object.create(arrayProto);
 
 var methodsToPatch = [
@@ -1097,14 +1066,18 @@ var methodsToPatch = [
 /**
  * Intercept mutating methods and emit events
  */
+ /*这里重写了数组的这些方法，在保证不污染原生数组原型的情况下重写数组的这些方法，截获数组的成员发生的变化，执行原生数组操作的同时dep通知关联的所有观察者进行响应式处理*/
 methodsToPatch.forEach(function (method) {
   // cache original method
+  /*将数组的原生方法缓存起来，后面要调用*/
   var original = arrayProto[method];
   def(arrayMethods, method, function mutator () {
     var args = [], len = arguments.length;
     while ( len-- ) args[ len ] = arguments[ len ];
 
+    /*调用原生的数组方法*/
     var result = original.apply(this, args);
+    /*数组新插入的元素需要重新进行observe才能响应式*/
     var ob = this.__ob__;
     var inserted;
     switch (method) {
@@ -1118,6 +1091,7 @@ methodsToPatch.forEach(function (method) {
     }
     if (inserted) { ob.observeArray(inserted); }
     // notify change
+    /*dep通知所有注册的观察者进行响应式处理*/
     ob.dep.notify();
     return result
   });
@@ -1126,12 +1100,6 @@ methodsToPatch.forEach(function (method) {
 /*  */
 
 var arrayKeys = Object.getOwnPropertyNames(arrayMethods);
-
-/**
- * In some cases we may want to disable observation inside a component's
- * update computation.
- */
-var shouldObserve = true;
 
 /**
  * Observer class that is attached to each observed
@@ -1143,15 +1111,29 @@ var Observer = function Observer (value) {
   this.value = value;
   this.dep = new Dep();
   this.vmCount = 0;
+  /* 
+   * 将Observer实例绑定到data的__ob__属性上面去
+   * 之前说过observe的时候会先检测是否已经有__ob__对象存放Observer实例了，def方法定义可以参考https://github.com/vuejs/vue/blob/dev/src/core/util/lang.js#L16
+   */
   def(value, '__ob__', this);
+  /*
+    如果是数组，将修改后可以截获响应的数组方法替换掉该数组的原型中的原生方法，达到监听数组数据变化响应的效果。
+    这里如果当前浏览器支持__proto__属性，则直接覆盖当前数组对象原型上的原生数组方法，如果不支持该属性，则直接覆盖数组对象的原型。
+  */
   if (Array.isArray(value)) {
+    /*
+        如果是数组，将修改后可以截获响应的数组方法替换掉该数组的原型中的原生方法，达到监听数组数据变化响应的效果。
+        这里如果当前浏览器支持__proto__属性，则直接覆盖当前数组对象原型上的原生数组方法，如果不支持该属性，则直接覆盖数组对象的原型。
+    */
     if (hasProto) {
-      protoAugment(value, arrayMethods);
+      protoAugment(value, arrayMethods); /*直接覆盖原型的方法来修改目标对象*/
     } else {
-      copyAugment(value, arrayMethods, arrayKeys);
+      copyAugment(value, arrayMethods, arrayKeys); /*定义（覆盖）目标对象或数组的某一个方法*/
     }
+    /*如果是数组则需要遍历数组的每一个成员进行observe*/
     this.observeArray(value);
   } else {
+    /*如果是对象则直接walk进行绑定*/
     this.walk(value);
   }
 };
@@ -1163,8 +1145,9 @@ var Observer = function Observer (value) {
  */
 Observer.prototype.walk = function walk (obj) {
   var keys = Object.keys(obj);
+  /*walk方法会遍历对象的每一个属性进行defineReactive绑定*/
   for (var i = 0; i < keys.length; i++) {
-    defineReactive$$1(obj, keys[i]);
+    defineReactive(obj, keys[i]);
   }
 };
 
@@ -1172,6 +1155,7 @@ Observer.prototype.walk = function walk (obj) {
  * Observe a list of Array items.
  */
 Observer.prototype.observeArray = function observeArray (items) {
+  /*数组需要遍历每一个成员进行observe*/
   for (var i = 0, l = items.length; i < l; i++) {
     observe(items[i]);
   }
@@ -1183,6 +1167,7 @@ Observer.prototype.observeArray = function observeArray (items) {
  * Augment a target Object or Array by intercepting
  * the prototype chain using __proto__
  */
+/*直接覆盖原型的方法来修改目标对象或数组*/
 function protoAugment (target, src) {
   /* eslint-disable no-proto */
   target.__proto__ = src;
@@ -1194,6 +1179,7 @@ function protoAugment (target, src) {
  * hidden properties.
  */
 /* istanbul ignore next */
+/*定义（覆盖）目标对象或数组的某一个方法*/
 function copyAugment (target, src, keys) {
   for (var i = 0, l = keys.length; i < l; i++) {
     var key = keys[i];
@@ -1206,15 +1192,29 @@ function copyAugment (target, src, keys) {
  * returns the new observer if successfully observed,
  * or the existing observer if the value already has one.
  */
+/**
+ * 尝试创建一个Observe示例(__ob__)
+ * 如果成功创建Observer实例则返回新的Observer实例
+ * 如果已有Observer实例则返回现有的Observer实例
+ */
 function observe (value, asRootData) {
+  /**
+   * 判断是否是一个对象
+   */
   if (!isObject(value) || value instanceof VNode) {
     return
   }
   var ob;
+  /*
+   * 这里用__ob__这个属性来判断是否已经有Observer实例
+   * 如果没有Observer实例则会新建一个Observer实例并赋值给__ob__这个属性
+   * 如果已有Observer实例则直接返回该Observer实例
+   */
   if (hasOwn(value, '__ob__') && value.__ob__ instanceof Observer) {
     ob = value.__ob__;
   } else if (
-    shouldObserve &&
+    /*这里的判断是为了确保value是单纯的对象，而不是函数或者是Regexp等情况。*/
+    
     !isServerRendering() &&
     (Array.isArray(value) || isPlainObject(value)) &&
     Object.isExtensible(value) &&
@@ -1223,6 +1223,7 @@ function observe (value, asRootData) {
     ob = new Observer(value);
   }
   if (asRootData && ob) {
+    /*如果是根数据则计数，后面Observer中的observe的asRootData非true*/
     ob.vmCount++;
   }
   return ob
@@ -1231,13 +1232,14 @@ function observe (value, asRootData) {
 /**
  * Define a reactive property on an Object.
  */
-function defineReactive$$1 (
+function defineReactive (
   obj,
   key,
   val,
   customSetter,
   shallow
 ) {
+  /*在闭包内存储一个Dep对象*/
   var dep = new Dep();
 
   var property = Object.getOwnPropertyDescriptor(obj, key);
@@ -1246,23 +1248,35 @@ function defineReactive$$1 (
   }
 
   // cater for pre-defined getter/setters
+  /*
+   * 如果之前该对象已经预设了getter以及setter函数则将其取出来
+   * 新定义的getter/setter中会将其执行，保证不会覆盖之前已经定义的getter/setter。
+   */
   var getter = property && property.get;
   var setter = property && property.set;
   if ((!getter || setter) && arguments.length === 2) {
     val = obj[key];
   }
-
+  /*对象的子对象递归进行observe并返回子节点的Observer对象*/
   var childOb = !shallow && observe(val);
   Object.defineProperty(obj, key, {
     enumerable: true,
     configurable: true,
     get: function reactiveGetter () {
+      /*如果原本对象拥有getter方法则执行*/
       var value = getter ? getter.call(obj) : val;
       if (Dep.target) {
+        /*Watcher对象存在全局的Dep.target中*/
+        /*进行依赖收集*/
         dep.depend();
         if (childOb) {
+          /*
+           * 子对象进行依赖收集，其实就是将同一个watcher观察者实例放进了两个depend中
+           * 一个是正在本身闭包中的depend，另一个是子元素的depend
+           */
           childOb.dep.depend();
           if (Array.isArray(value)) {
+            /*是数组则需要对每一个成员都进行依赖收集，如果数组的成员还是数组，则递归。*/
             dependArray(value);
           }
         }
@@ -1272,6 +1286,7 @@ function defineReactive$$1 (
     set: function reactiveSetter (newVal) {
       var value = getter ? getter.call(obj) : val;
       /* eslint-disable no-self-compare */
+      /*通过getter方法获取当前值，与新值进行比较，一致则不需要执行下面的操作*/
       if (newVal === value || (newVal !== newVal && value !== value)) {
         return
       }
@@ -1282,11 +1297,15 @@ function defineReactive$$1 (
       // #7981: for accessor properties without setter
       if (getter && !setter) { return }
       if (setter) {
+        /*如果原本对象拥有setter方法则执行setter*/
         setter.call(obj, newVal);
       } else {
         val = newVal;
       }
+      /*新的值需要重新进行observe，保证数据响应式*/
       childOb = !shallow && observe(newVal);
+      /*只有之前addSub中的函数才会触发*/
+      /*dep对象通知所有的观察者*/
       dep.notify();
     }
   });
@@ -1324,7 +1343,7 @@ function set (target, key, val) {
     target[key] = val;
     return val
   }
-  defineReactive$$1(ob.value, key, val);
+  defineReactive(ob.value, key, val);
   ob.dep.notify();
   return val
 }
@@ -1603,10 +1622,6 @@ function assertObjectType (name, value, vm) {
 
 /*  */
 
-/*  */
-
-/*  */
-
 var callbacks = [];
 
 function flushCallbacks () {
@@ -1642,8 +1657,6 @@ if (typeof Promise !== 'undefined' && isNative(Promise)) ; else if (!isIE && typ
 
 /*  */
 
-/*  */
-
 // these are reserved for web because they are directly compiled away
 // during template compilation
 var isReservedAttr = makeMap('style,class');
@@ -1671,8 +1684,6 @@ var isBooleanAttr = makeMap(
   'required,reversed,scoped,seamless,selected,sortable,translate,' +
   'truespeed,typemustmatch,visible'
 );
-
-/*  */
 
 /*  */
 
@@ -1717,8 +1728,6 @@ function getTagNamespace (tag) {
 }
 
 var isTextInputType = makeMap('text,number,password,search,email,tel,url');
-
-/*  */
 
 /*  */
 
@@ -2349,7 +2358,7 @@ function parseString (chr) {
 /*  */
 
 var onRE = /^@|^v-on:/;
-var dirRE = /^v-|^@|^:|^#/;
+var dirRE =  /^v-|^@|^:|^#/;
 var forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/;
 var forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/;
 var stripParensRE = /^\(|\)$/g;
@@ -2704,7 +2713,7 @@ function parse (
       }
     },
     comment: function comment (text, start, end) {
-      // adding anyting as a sibling to the root node is forbidden
+      // adding anything as a sibling to the root node is forbidden
       // comments should still be allowed, but ignored
       if (currentParent) {
         var child = {
@@ -2907,8 +2916,8 @@ function addIfCondition (el, condition) {
 }
 
 function processOnce (el) {
-  var once$$1 = getAndRemoveAttr(el, 'v-once');
-  if (once$$1 != null) {
+  var once = getAndRemoveAttr(el, 'v-once');
+  if (once != null) {
     el.once = true;
   }
 }
@@ -3884,7 +3893,7 @@ function on (el, dir) {
 
 /*  */
 
-function bind$1 (el, dir) {
+function bind (el, dir) {
   el.wrapData = function (code) {
     return ("_b(" + code + ",'" + (el.tag) + "'," + (dir.value) + "," + (dir.modifiers && dir.modifiers.prop ? 'true' : 'false') + (dir.modifiers && dir.modifiers.sync ? ',true' : '') + ")")
   };
@@ -3894,7 +3903,7 @@ function bind$1 (el, dir) {
 
 var baseDirectives = {
   on: on,
-  bind: bind$1,
+  bind: bind,
   cloak: noop
 };
 
@@ -4398,15 +4407,15 @@ function genSlot (el, state) {
         dynamic: attr.dynamic
       }); }))
     : null;
-  var bind$$1 = el.attrsMap['v-bind'];
-  if ((attrs || bind$$1) && !children) {
+  var bind = el.attrsMap['v-bind'];
+  if ((attrs || bind) && !children) {
     res += ",null";
   }
   if (attrs) {
     res += "," + attrs;
   }
-  if (bind$$1) {
-    res += (attrs ? '' : ',null') + "," + bind$$1;
+  if (bind) {
+    res += (attrs ? '' : ',null') + "," + bind;
   }
   return res + ')'
 }
@@ -4426,7 +4435,7 @@ function genProps (props) {
   var dynamicProps = "";
   for (var i = 0; i < props.length; i++) {
     var prop = props[i];
-    var value = transformSpecialNewlines(prop.value);
+    var value =  transformSpecialNewlines(prop.value);
     if (prop.dynamic) {
       dynamicProps += (prop.name) + "," + value + ",";
     } else {
@@ -4651,7 +4660,7 @@ function createCompileToFunctionFn (compile) {
     vm
   ) {
     options = extend({}, options);
-    var warn$$1 = options.warn || warn;
+    var warn$1 = options.warn || warn;
     delete options.warn;
 
     /* istanbul ignore if */
@@ -4661,7 +4670,7 @@ function createCompileToFunctionFn (compile) {
         new Function('return 1');
       } catch (e) {
         if (e.toString().match(/unsafe-eval|CSP/)) {
-          warn$$1(
+          warn$1(
             'It seems you are using the standalone build of Vue.js in an ' +
             'environment with Content Security Policy that prohibits unsafe-eval. ' +
             'The template compiler cannot work in this environment. Consider ' +
@@ -4688,14 +4697,14 @@ function createCompileToFunctionFn (compile) {
       if (compiled.errors && compiled.errors.length) {
         if (options.outputSourceRange) {
           compiled.errors.forEach(function (e) {
-            warn$$1(
+            warn$1(
               "Error compiling template:\n\n" + (e.msg) + "\n\n" +
               generateCodeFrame(template, e.start, e.end),
               vm
             );
           });
         } else {
-          warn$$1(
+          warn$1(
             "Error compiling template:\n\n" + template + "\n\n" +
             compiled.errors.map(function (e) { return ("- " + e); }).join('\n') + '\n',
             vm
@@ -4725,7 +4734,7 @@ function createCompileToFunctionFn (compile) {
     /* istanbul ignore if */
     if (process.env.NODE_ENV !== 'production') {
       if ((!compiled.errors || !compiled.errors.length) && fnGenErrors.length) {
-        warn$$1(
+        warn$1(
           "Failed to generate render function:\n\n" +
           fnGenErrors.map(function (ref) {
             var err = ref.err;
@@ -4846,9 +4855,9 @@ var compileToFunctions = ref.compileToFunctions;
 var isAttr = makeMap(
   'accept,accept-charset,accesskey,action,align,alt,async,autocomplete,' +
   'autofocus,autoplay,autosave,bgcolor,border,buffered,challenge,charset,' +
-  'checked,cite,class,code,codebase,color,cols,colspan,content,http-equiv,' +
-  'name,contenteditable,contextmenu,controls,coords,data,datetime,default,' +
-  'defer,dir,dirname,disabled,download,draggable,dropzone,enctype,method,for,' +
+  'checked,cite,class,code,codebase,color,cols,colspan,content,' +
+  'contenteditable,contextmenu,controls,coords,data,datetime,default,' +
+  'defer,dir,dirname,disabled,download,draggable,dropzone,enctype,for,' +
   'form,formaction,headers,height,hidden,high,href,hreflang,http-equiv,' +
   'icon,id,ismap,itemprop,keytype,kind,label,lang,language,list,loop,low,' +
   'manifest,max,maxlength,media,method,GET,POST,min,multiple,email,file,' +
@@ -4856,7 +4865,7 @@ var isAttr = makeMap(
   'preload,radiogroup,readonly,rel,required,reversed,rows,rowspan,sandbox,' +
   'scope,scoped,seamless,selected,shape,size,type,text,password,sizes,span,' +
   'spellcheck,src,srcdoc,srclang,srcset,start,step,style,summary,tabindex,' +
-  'target,title,type,usemap,value,width,wrap'
+  'target,title,usemap,value,width,wrap'
 );
 
 /* istanbul ignore next */
@@ -5383,11 +5392,9 @@ var ref$1 = createCompiler$1(baseOptions);
 var compile$1 = ref$1.compile;
 var compileToFunctions$1 = ref$1.compileToFunctions;
 
-/*  */
-
-exports.parseComponent = parseComponent;
 exports.compile = compile;
 exports.compileToFunctions = compileToFunctions;
+exports.generateCodeFrame = generateCodeFrame;
+exports.parseComponent = parseComponent;
 exports.ssrCompile = compile$1;
 exports.ssrCompileToFunctions = compileToFunctions$1;
-exports.generateCodeFrame = generateCodeFrame;

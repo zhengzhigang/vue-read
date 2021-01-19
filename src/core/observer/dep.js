@@ -57,6 +57,7 @@ const targetStack = []
 
 export function pushTarget (target: ?Watcher) {
   targetStack.push(target)
+  /*在这里将观察者本身赋值给全局的target，只有被target标记过的才会进行依赖收集*/
   Dep.target = target
 }
 

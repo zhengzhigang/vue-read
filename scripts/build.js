@@ -9,7 +9,6 @@ if (!fs.existsSync('dist')) {
 }
 
 let builds = require('./config').getAllBuilds()
-
 // filter builds via command line arg
 if (process.argv[2]) {
   const filters = process.argv[2].split(',')
@@ -23,11 +22,13 @@ if (process.argv[2]) {
   })
 }
 
+
 build(builds)
 
 function build (builds) {
   let built = 0
   const total = builds.length
+  console.log('1111', builds)
   const next = () => {
     buildEntry(builds[built]).then(() => {
       built++

@@ -45,8 +45,8 @@ export function createElement (
 }
 
 export function _createElement (
-  context: Component,
-  tag?: string | Class<Component> | Function | Object,
+  context: Component,  // vnode的上下文
+  tag?: string | Class<Component> | Function | Object,  // 标签
   data?: VNodeData,
   children?: any,
   normalizationType?: number
@@ -88,8 +88,10 @@ export function _createElement (
     children.length = 0
   }
   if (normalizationType === ALWAYS_NORMALIZE) {
+    // render函数是用户手写的
     children = normalizeChildren(children)
   } else if (normalizationType === SIMPLE_NORMALIZE) {
+    // render函数是编译生成的
     children = simpleNormalizeChildren(children)
   }
   let vnode, ns

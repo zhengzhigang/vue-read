@@ -262,7 +262,6 @@ function genConfig (name) {
 
   return config
 }
-
 if (process.env.TARGET) {
   module.exports = genConfig(process.env.TARGET)
 } else {

@@ -40,22 +40,22 @@ export default ({
    * Option merge strategies (used in core/util/options)
    */
   // $flow-disable-line
-  optionMergeStrategies: Object.create(null),
+  optionMergeStrategies: Object.create(null), // 自定义合并策略的选项。
 
   /**
    * Whether to suppress warnings.
    */
-  silent: false,
+  silent: false,  // 取消 Vue 所有的日志与警告。
 
   /**
    * Show production mode tip message on boot?
    */
-  productionTip: process.env.NODE_ENV !== 'production',
+  productionTip: process.env.NODE_ENV !== 'production',  // 设置为 false 以阻止 vue 在启动时生成生产提示。
 
   /**
    * Whether to enable devtools
    */
-  devtools: process.env.NODE_ENV !== 'production',
+  devtools: process.env.NODE_ENV !== 'production',  // 配置是否允许 vue-devtools 检查代码。
 
   /**
    * Whether to record perf
@@ -65,23 +65,23 @@ export default ({
   /**
    * Error handler for watcher errors
    */
-  errorHandler: null,
+  errorHandler: null,  // 指定组件的渲染和观察期间未捕获错误的处理函数。
 
   /**
    * Warn handler for watcher warns
    */
-  warnHandler: null,
+  warnHandler: null,  // 为 Vue 的运行时警告赋予一个自定义处理函数。
 
   /**
    * Ignore certain custom elements
    */
-  ignoredElements: [],
+  ignoredElements: [],  // 须使 Vue 忽略在 Vue 之外的自定义元素
 
   /**
    * Custom user key aliases for v-on
    */
   // $flow-disable-line
-  keyCodes: Object.create(null),
+  keyCodes: Object.create(null),  // 给 v-on 自定义键位别名
 
   /**
    * Check if a tag is reserved so that it cannot be registered as a

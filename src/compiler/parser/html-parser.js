@@ -17,7 +17,7 @@ import { unicodeRegExp } from 'core/util/lang'
 const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/
 const dynamicArgAttribute = /^\s*((?:v-[\w-]+:|@|:|#)\[[^=]+\][^\s"'<>\/=]*)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/
 const ncname = `[a-zA-Z_][\\-\\.0-9_a-zA-Z${unicodeRegExp.source}]*`
-const qnameCapture = `((?:${ncname}\\:)?${ncname})`
+const qnameCapture = `((?:${ncname}\\:)?${ncname})`  // qnameCapture = `((?:${ncname}\\:)?${ncname})`
 const startTagOpen = new RegExp(`^<${qnameCapture}`)
 const startTagClose = /^\s*(\/?)>/
 const endTag = new RegExp(`^<\\/${qnameCapture}[^>]*>`)
@@ -65,6 +65,7 @@ export function parseHTML (html, options) {
       let textEnd = html.indexOf('<')
       if (textEnd === 0) {
         // Comment:
+        // 注释
         if (comment.test(html)) {
           const commentEnd = html.indexOf('-->')
 
@@ -78,8 +79,9 @@ export function parseHTML (html, options) {
         }
 
         // http://en.wikipedia.org/wiki/Conditional_comment#Downlevel-revealed_conditional_comment
+        // 条件注释
         if (conditionalComment.test(html)) {
-          const conditionalEnd = html.indexOf(']>')
+          const conditionalEnd = html.indexOf(']>') 
 
           if (conditionalEnd >= 0) {
             advance(conditionalEnd + 2)
@@ -88,6 +90,7 @@ export function parseHTML (html, options) {
         }
 
         // Doctype:
+        // 文档
         const doctypeMatch = html.match(doctype)
         if (doctypeMatch) {
           advance(doctypeMatch[0].length)
@@ -179,22 +182,25 @@ export function parseHTML (html, options) {
   // Clean up any remaining tags
   parseEndTag()
 
+  // 递增index并截取剩余的html
   function advance (n) {
     index += n
     html = html.substring(n)
   }
 
   function parseStartTag () {
+    // 匹配开始标签
     const start = html.match(startTagOpen)
     if (start) {
       const match = {
         tagName: start[1],
         attrs: [],
-        start: index
+        start: index // 当前标签开始位置
       }
       advance(start[0].length)
       let end, attr
       while (!(end = html.match(startTagClose)) && (attr = html.match(dynamicArgAttribute) || html.match(attribute))) {
+        // 将index赋值给attr的start
         attr.start = index
         advance(attr[0].length)
         attr.end = index
@@ -246,7 +252,6 @@ export function parseHTML (html, options) {
       stack.push({ tag: tagName, lowerCasedTag: tagName.toLowerCase(), attrs: attrs, start: match.start, end: match.end })
       lastTag = tagName
     }
-
     if (options.start) {
       options.start(tagName, attrs, unary, match.start, match.end)
     }

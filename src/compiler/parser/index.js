@@ -92,7 +92,7 @@ export function parse (
   preTransforms = pluckModuleFunction(options.modules, 'preTransformNode')
   postTransforms = pluckModuleFunction(options.modules, 'postTransformNode')
 
-  delimiters = options.delimiters
+  delimiters = options.delimiters   // 分隔符
 
   const stack = []
   const preserveWhitespace = options.preserveWhitespace !== false

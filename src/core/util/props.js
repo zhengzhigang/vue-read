@@ -18,6 +18,7 @@ type PropOptions = {
   validator: ?Function
 };
 
+'tag_ids=123,123,234'
 export function validateProp (
   key: string,
   propOptions: Object,

@@ -8,8 +8,7 @@ import { isIE, isIOS, isNative } from './env'
 export let isUsingMicroTask = false
 
 const callbacks = []
-let pending = false
-
+let pending = false // 用来标识同一个时间只能执行一次
 function flushCallbacks () {
   pending = false
   const copies = callbacks.slice(0)
@@ -86,8 +85,10 @@ if (typeof Promise !== 'undefined' && isNative(Promise)) {
 
 export function nextTick (cb?: Function, ctx?: Object) {
   let _resolve
+  // cb 回调函数会经统一处理压入 callbacks 数组
   callbacks.push(() => {
     if (cb) {
+      // 给 cb 回调函数执行加上了 try-catch 错误处理
       try {
         cb.call(ctx)
       } catch (e) {
@@ -99,9 +100,11 @@ export function nextTick (cb?: Function, ctx?: Object) {
   })
   if (!pending) {
     pending = true
+    // 执行异步延迟函数 timerFunc
     timerFunc()
   }
   // $flow-disable-line
+  // 当 nextTick 没有传入函数参数的时候，返回一个 Promise 化的调用
   if (!cb && typeof Promise !== 'undefined') {
     return new Promise(resolve => {
       _resolve = resolve
